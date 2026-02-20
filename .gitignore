@@ -1,0 +1,6 @@
+__pycache__/
+jarvis.db
+*.pyc
+.vscode/
+engine/auth/samples/
+engine/auth/trainer/trainer.yml
