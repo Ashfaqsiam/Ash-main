@@ -80,7 +80,7 @@ def hotword():
     audio_stream=None
     
     # 1. Put your Picovoice Access Key here
-    ACCESS_KEY = "Ldt1zX8XMyOBDe0c5LbAXNlb5ol/Orm2yTiy1U4G8qujKosn6gWROQ=="
+    ACCESS_KEY = ""
     
     # 2. FIXED: Added the 'r' before the string to handle Windows file paths properly
     PPN_FILE_PATH = r"D:\Hello-Ash_en_windows_v4_0_0\Hello-Ash_en_windows_v4_0_0.ppn" 
