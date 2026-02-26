@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ## 🤖 Ash — Your Personal Desktop Voice Assistant
 
 **Ash** is a smart and customizable desktop assistant built by **Ashfaq Ahamed** using **Python**, **Eel**, **HTML/CSS**, and **JavaScript**. It helps you control your PC and mobile with simple **voice** or **typed commands**.
@@ -49,3 +50,7 @@ From launching apps to making calls and chatting, Ash brings AI and automation t
 ```bash
 git clone <your-repository-url>
 cd ash-python-assistant
+=======
+Ash is a personal AI assistant 
+
+>>>>>>> 9f8d0a6bf384cf04abf9a9e3c370049eab46a1c0
