@@ -1,2 +1,3 @@
 ASSISTANT_NAME = "Ash"
-LLM_KEY = "AIzaSyCQCf6HiSSvXpbYBl10N-eaouUPgaD3KZA"
+LLM_KEY = ""  
+#API KEY

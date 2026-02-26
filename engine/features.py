@@ -1,3 +1,4 @@
+
 import datetime
 import json
 import os
@@ -73,61 +74,57 @@ def PlayYoutube(query):
     speak("Playing "+search_term+" on YouTube")
     kit.playonyt(search_term)
 
-
-def hotword():
+# --- UPDATED HOTWORD FUNCTION ---
+def hotword(hotword_event=None):
     porcupine=None
     paud=None
     audio_stream=None
     
     # 1. Put your Picovoice Access Key here
-    ACCESS_KEY = "Ldt1zX8XMyOBDe0c5LbAXNlb5ol/Orm2yTiy1U4G8qujKosn6gWROQ=="
+    ACCESS_KEY = ""
     
     # 2. FIXED: Added the 'r' before the string to handle Windows file paths properly
-    PPN_FILE_PATH = r"D:\Hello-Ash_en_windows_v4_0_0\Hello-Ash_en_windows_v4_0_0.ppn" 
+    PPN_FILE_PATH = r"D:\Hello-ASH_en_windows_v4_0_0 (1)\Hello-ASH_en_windows_v4_0_0.ppn" 
     
     try:
-        # Load the custom file using your access key and keyword_paths    
-        porcupine=pvporcupine.create(access_key=ACCESS_KEY, keyword_paths=[PPN_FILE_PATH]) 
+        # sensitives add kora hoyeche jate hotword druto dhorbe
+        porcupine=pvporcupine.create(
+            access_key=ACCESS_KEY, 
+            keyword_paths=[PPN_FILE_PATH],
+            sensitivities=[0.85]
+        ) 
         paud=pyaudio.PyAudio()
         audio_stream=paud.open(rate=porcupine.sample_rate,channels=1,format=pyaudio.paInt16,input=True,frames_per_buffer=porcupine.frame_length)
         
         print("Listening for Hello Ash...")
         
-        # loop for streaming
         while True:
-            # exception_on_overflow=False prevents the stream from crashing if the mic is too fast
             keyword = audio_stream.read(porcupine.frame_length, exception_on_overflow=False)
             keyword=struct.unpack_from("h"*porcupine.frame_length,keyword)
 
-            # processing keyword comes from mic 
             keyword_index=porcupine.process(keyword)
 
-            # checking if keyword is detected
-            # checking if keyword is detected
             if keyword_index>=0:
                 print("hotword detected")
-
-                # FIXED: Added the import right here so Python knows what 'autogui' is
-                import pyautogui as autogui 
                 
-                # pressing shorcut key win+j
-                autogui.keyDown("win")
-                autogui.press("j")
-                time.sleep(2)
-                autogui.keyUp("win")
+                # EI SWITCH-TA PRESS KORA HOYECHE (Event set)
+                if hotword_event:
+                    hotword_event.set()
+                
+                # UI/Background logic trigger korar jonno amra Win+J shortcut ta trigger rakhte pari
+                # jodi apni pop up chan. Jodi pop up na chan, tahole shudhu event-ei kaj hobe.
+                time.sleep(1)
+                
     except Exception as e:
-        # FIXED: Now if the code crashes, it will print the exact error message!
         print(f"An error occurred: {e}")
         
     finally:
-        # Moved the cleanup here so it safely closes the microphone even if you stop the script
         if porcupine is not None:
             porcupine.delete()
         if audio_stream is not None:
             audio_stream.close()
         if paud is not None:
             paud.terminate()
-
 
 # find contacts
 def findContact(query):
