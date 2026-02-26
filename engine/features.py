@@ -80,7 +80,7 @@ def hotword(hotword_event=None):
     paud=None
     audio_stream=None
     
-    # 1. Put your Picovoice Access Key here
+    # 1. Put your Picovoice Access Key 
     ACCESS_KEY = ""
     
     # 2. FIXED: Added the 'r' before the string to handle Windows file paths properly
