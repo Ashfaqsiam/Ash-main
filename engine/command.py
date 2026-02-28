@@ -3,7 +3,7 @@ import speech_recognition as sr
 import eel
 import time
 import threading 
-import pygetwindow as gw # Make sure to install: pip install pygetwindow
+import pygetwindow as gw
 
 # --- Global flag and Engine Initialization ---
 stop_speaking_flag = False
@@ -84,9 +84,11 @@ def allCommands(message=1):
         if "open" in query:
             from engine.features import openCommand
             openCommand(query)
+            
         elif "on youtube" in query:
             from engine.features import PlayYoutube
             PlayYoutube(query)
+            
         elif any(x in query for x in ["send message", "phone call", "video call"]):
             from engine.features import findContact, whatsApp, makeCall, sendMessage
             contact_no, name = findContact(query)
@@ -106,9 +108,16 @@ def allCommands(message=1):
                         speak("what message to send")
                         query = takecommand()
                     whatsApp(contact_no, query, mode, name)
+                    
+        # --- NEW: Ash's Learning Engine Trigger ---
+        elif "remember that" in query or "remember" in query:
+            from engine.features import rememberFact
+            rememberFact(query)
+            
         else:
             from engine.features import geminai
             geminai(query)
+            
     except Exception as e:
         print(f"Error in allCommands logic: {e}")
     
@@ -126,14 +135,13 @@ def trigger_listening_sequence():
         # 2. FORCE WINDOW TO FRONT
         # This ensures the microphone has priority access
         try:
-            # Replace "Ash" with your exact HTML <title>
             app_windows = gw.getWindowsWithTitle("Ash")
             if app_windows:
                 win = app_windows[0]
                 if win.isMinimized:
                     win.restore()
                 win.activate()
-                time.sleep(0.3) # Wait for focus to settle
+                time.sleep(0.3) 
         except Exception as e:
             print(f"Focus Error: {e}")
 

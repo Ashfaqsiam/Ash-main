@@ -1,4 +1,3 @@
-
 import datetime
 import json
 import os
@@ -13,12 +12,12 @@ from playsound import playsound
 import eel
 import pyaudio
 import pyautogui
-from engine.command import speak
-from engine.config import ASSISTANT_NAME, LLM_KEY
-# Playing assiatnt sound function
 import pywhatkit as kit
 import pvporcupine
+import google.generativeai as genai
 
+from engine.command import speak
+from engine.config import ASSISTANT_NAME, LLM_KEY
 from engine.helper import extract_yt_term, markdown_to_text, remove_words
 from hugchat import hugchat
 
@@ -39,7 +38,6 @@ def openCommand(query):
     app_name = query.strip()
 
     if app_name != "":
-
         try:
             cursor.execute(
                 'SELECT path FROM sys_command WHERE name IN (?)', (app_name,))
@@ -57,7 +55,6 @@ def openCommand(query):
                 if len(results) != 0:
                     speak("Opening "+query)
                     webbrowser.open(results[0][0])
-
                 else:
                     speak("Opening "+query)
                     try:
@@ -67,27 +64,26 @@ def openCommand(query):
         except:
             speak("some thing went wrong")
 
-       
 
 def PlayYoutube(query):
     search_term = extract_yt_term(query)
     speak("Playing "+search_term+" on YouTube")
     kit.playonyt(search_term)
 
-# --- UPDATED HOTWORD FUNCTION ---
+
+# --- HOTWORD FUNCTION ---
 def hotword(hotword_event=None):
     porcupine=None
     paud=None
     audio_stream=None
     
-    # 1. Put your Picovoice Access Key 
+    # Put your Picovoice Access Key 
     ACCESS_KEY = ""
-    
-    # 2. FIXED: Added the 'r' before the string to handle Windows file paths properly
+
+    # Windows file path
     PPN_FILE_PATH = r"D:\Hello-ASH_en_windows_v4_0_0 (1)\Hello-ASH_en_windows_v4_0_0.ppn" 
     
     try:
-        # sensitives add kora hoyeche jate hotword druto dhorbe
         porcupine=pvporcupine.create(
             access_key=ACCESS_KEY, 
             keyword_paths=[PPN_FILE_PATH],
@@ -101,7 +97,6 @@ def hotword(hotword_event=None):
         while True:
             keyword = audio_stream.read(porcupine.frame_length, exception_on_overflow=False)
             keyword=struct.unpack_from("h"*porcupine.frame_length,keyword)
-
             keyword_index=porcupine.process(keyword)
 
             if keyword_index>=0:
@@ -111,8 +106,6 @@ def hotword(hotword_event=None):
                 if hotword_event:
                     hotword_event.set()
                 
-                # UI/Background logic trigger korar jonno amra Win+J shortcut ta trigger rakhte pari
-                # jodi apni pop up chan. Jodi pop up na chan, tahole shudhu event-ei kaj hobe.
                 time.sleep(1)
                 
     except Exception as e:
@@ -126,9 +119,9 @@ def hotword(hotword_event=None):
         if paud is not None:
             paud.terminate()
 
+
 # find contacts
 def findContact(query):
-    
     words_to_remove = [ASSISTANT_NAME, 'make', 'a', 'to', 'phone', 'call', 'send', 'message', 'wahtsapp', 'video']
     query = remove_words(query, words_to_remove)
 
@@ -148,29 +141,23 @@ def findContact(query):
         return 0, 0
     
 def whatsApp(mobile_no, message, flag, name):
-    
-
     if flag == 'message':
         target_tab = 12
         jarvis_message = "message send successfully to "+name
-
     elif flag == 'call':
         target_tab = 7
         message = ''
         jarvis_message = "calling to "+name
-
     else:
         target_tab = 6
         message = ''
         jarvis_message = "staring video call with "+name
-
 
     # Encode the message for URL
     encoded_message = quote(message)
     print(encoded_message)
     # Construct the URL
     whatsapp_url = f"whatsapp://send?phone={mobile_no}&text={encoded_message}"
-
     # Construct the full command
     full_command = f'start "" "{whatsapp_url}"'
 
@@ -187,6 +174,7 @@ def whatsApp(mobile_no, message, flag, name):
     pyautogui.hotkey('enter')
     speak(jarvis_message)
 
+
 # chat bot 
 def chatBot(query):
     user_input = query.lower()
@@ -198,8 +186,8 @@ def chatBot(query):
     speak(response)
     return response
 
-# android automation
 
+# android automation
 def makeCall(name, mobileNo):
     mobileNo =mobileNo.replace(" ", "")
     speak("Calling "+name)
@@ -232,14 +220,9 @@ def sendMessage(message, mobileNo, name):
     tapEvents(957, 1397)
     speak("message send successfully to "+name)
 
-import google.generativeai as genai
-import google.generativeai as genai
-from engine.config import ASSISTANT_NAME, LLM_KEY
-from engine.helper import markdown_to_text
-from engine.command import speak
 
+# --- GEMINI AI FUNCTION (Reads from memory.txt) ---
 def geminai(query):
-    # Don't send empty queries to the API! This wastes your free quota.
     if not query or query.strip() == "":
         return 
 
@@ -251,18 +234,23 @@ def geminai(query):
         current_time = now.strftime("%I:%M %p") 
         current_date = now.strftime("%B %d, %Y") 
         
+        # Pulling the persona from your text file
+        persona = ""
+        try:
+            with open("memory.txt", "r", encoding="utf-8") as file:
+                persona = file.read()
+                
+            # Replace tags with actual time and date
+            persona = persona.replace("{time}", current_time).replace("{date}", current_date)
+            
+        except FileNotFoundError:
+            print("[Warning] memory.txt not found! Please create it in your main project folder.")
+            persona = f"Your name is Ash. You were built by Ashfaq Ahamed. Time is {current_time}. Be helpful."
+
         genai.configure(api_key=LLM_KEY)
 
-        persona = (
-            f"Your name is Ash. You were built and created by Ashfaq Ahamed. "
-            f"The current time is exactly {current_time} and today's date is {current_date}. "
-            f"If anyone asks who made you, you must say Ashfaq Ahamed built you. "
-            f"You are a helpful, smart, and friendly AI virtual assistant. "
-            f"Keep your answers concise and conversational."
-        )
-
         model = genai.GenerativeModel(
-            "gemini-2.5-flash",
+            model_name="gemini-3-flash-preview",
             system_instruction=persona
         )
 
@@ -274,22 +262,43 @@ def geminai(query):
         
     except Exception as e:
         error_message = str(e)
-        # Catch the 429 Quota error specifically
         if "429" in error_message or "Quota" in error_message:
-            print("Rate limit hit! Waiting for the API to cool down...")
-            speak("I am receiving too many requests right now. Please give me a minute to process.")
+            print("Rate limit hit! Check your Google Cloud Billing.")
+            speak("I am receiving too many requests right now. Please check my API billing status.")
         else:
             print("Gemini Error:", e)
+
+# --- ASH's LEARNING ENGINE ---
+def rememberFact(query):
+    query = query.replace(ASSISTANT_NAME, "").strip()
+    
+    if "remember that" in query:
+        fact = query.split("remember that")[1].strip()
+    elif "remember" in query:
+        fact = query.split("remember")[1].strip()
+    else:
+        speak("What would you like me to remember?")
+        return
+
+    if fact != "":
+        try:
+            with open("memory.txt", "a", encoding="utf-8") as file:
+                file.write(f"\n- {fact.capitalize()}.")
+            
+            print(f"[MEMORY UPDATED]: {fact}")
+            speak(f"Got it. I will remember that {fact}.")
+        except Exception as e:
+            print(f"Memory Error: {e}")
+            speak("Sorry, I had trouble writing that down in my memory file.")
+
+
 # Settings Modal 
-
-
 
 # Assistant name
 @eel.expose
 def assistantName():
     name = ASSISTANT_NAME
     return name
-
 
 @eel.expose
 def personalInfo():
@@ -302,21 +311,18 @@ def personalInfo():
     except:
         print("no data")
 
-
 @eel.expose
 def updatePersonalInfo(name, designation, mobileno, email, city):
     cursor.execute("SELECT COUNT(*) FROM info")
     count = cursor.fetchone()[0]
 
     if count > 0:
-        # Update existing record
         cursor.execute(
             '''UPDATE info 
                SET name=?, designation=?, mobileno=?, email=?, city=?''',
             (name, designation, mobileno, email, city)
         )
     else:
-        # Insert new record if no data exists
         cursor.execute(
             '''INSERT INTO info (name, designation, mobileno, email, city) 
                VALUES (?, ?, ?, ?, ?)''',
@@ -327,8 +333,6 @@ def updatePersonalInfo(name, designation, mobileno, email, city):
     personalInfo()
     return 1
 
-
-
 @eel.expose
 def displaySysCommand():
     cursor.execute("SELECT * FROM sys_command")
@@ -337,19 +341,16 @@ def displaySysCommand():
     eel.displaySysCommand(jsonArr)
     return 1
 
-
 @eel.expose
 def deleteSysCommand(id):
     cursor.execute("DELETE FROM sys_command WHERE id = ?", (id,))
     con.commit()
-
 
 @eel.expose
 def addSysCommand(key, value):
     cursor.execute(
         '''INSERT INTO sys_command VALUES (?, ?, ?)''', (None,key, value))
     con.commit()
-
 
 @eel.expose
 def displayWebCommand():
@@ -359,19 +360,16 @@ def displayWebCommand():
     eel.displayWebCommand(jsonArr)
     return 1
 
-
 @eel.expose
 def addWebCommand(key, value):
     cursor.execute(
         '''INSERT INTO web_command VALUES (?, ?, ?)''', (None, key, value))
     con.commit()
 
-
 @eel.expose
 def deleteWebCommand(id):
     cursor.execute("DELETE FROM web_command WHERE Id = ?", (id,))
     con.commit()
-
 
 @eel.expose
 def displayPhoneBookCommand():
@@ -381,12 +379,10 @@ def displayPhoneBookCommand():
     eel.displayPhoneBookCommand(jsonArr)
     return 1
 
-
 @eel.expose
 def deletePhoneBookCommand(id):
     cursor.execute("DELETE FROM contacts WHERE Id = ?", (id,))
     con.commit()
-
 
 @eel.expose
 def InsertContacts(Name, MobileNo, Email, City):
