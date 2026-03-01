@@ -1,3 +1,5 @@
 ASSISTANT_NAME = "Ash"
 LLM_KEY = ""  
-#API KEY
+# Your Groq API Key
+GROQ_API_KEY = ""
+

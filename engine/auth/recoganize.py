@@ -5,24 +5,24 @@ import pyautogui as p
 
 
 def AuthenticateFace():
+    # Initialize flag and name variable
+    flag = 0
+    recognized_name = "unknown" 
 
-    flag = ""
     # Local Binary Patterns Histograms
     recognizer = cv2.face.LBPHFaceRecognizer_create()
 
     recognizer.read('engine\\auth\\trainer\\trainer.yml')  # load trained model
     cascadePath = "engine\\auth\\haarcascade_frontalface_default.xml"
+    
     # initializing haar cascade for object detection approach
     faceCascade = cv2.CascadeClassifier(cascadePath)
 
     font = cv2.FONT_HERSHEY_SIMPLEX  # denotes the font type
 
-
     id = 2  # number of persons you want to Recognize
 
-
-    names = ['', 'Ashfaq']  # names, leave first empty bcz counter starts from 0
-
+    names = ['', 'Ashfaq', 'Saad']  # names, leave first empty bcz counter starts from 0
 
     cam = cv2.VideoCapture(0, cv2.CAP_DSHOW)  # cv2.CAP_DSHOW to remove warning
     cam.set(3, 640)  # set video FrameWidht
@@ -31,8 +31,6 @@ def AuthenticateFace():
     # Define min window size to be recognized as a face
     minW = 0.1*cam.get(3)
     minH = 0.1*cam.get(4)
-
-    # flag = True
 
     while True:
 
@@ -54,21 +52,26 @@ def AuthenticateFace():
             cv2.rectangle(img, (x, y), (x+w, y+h), (0, 255, 0), 2)
 
             # to predict on every single image
-            id, accuracy = recognizer.predict(converted_image[y:y+h, x:x+w])
+            id_num, accuracy = recognizer.predict(converted_image[y:y+h, x:x+w])
 
             # Check if accuracy is less them 100 ==> "0" is perfect match
             if (accuracy < 100):
-                id = names[id]
-                accuracy = "  {0}%".format(round(100 - accuracy))
-                flag = 1
+                # SAFETY CHECK: Make sure the ID actually exists in the names list
+                if id_num < len(names):
+                    recognized_name = names[id_num]
+                    flag = 1
+                else:
+                    recognized_name = "unknown"
+                    flag = 0
+                
+                accuracy_text = "  {0}%".format(round(100 - accuracy))
             else:
-                id = "unknown"
-                accuracy = "  {0}%".format(round(100 - accuracy))
+                recognized_name = "unknown"
+                accuracy_text = "  {0}%".format(round(100 - accuracy))
                 flag = 0
 
-            cv2.putText(img, str(id), (x+5, y-5), font, 1, (255, 255, 255), 2)
-            cv2.putText(img, str(accuracy), (x+5, y+h-5),
-                        font, 1, (255, 255, 0), 1)
+            cv2.putText(img, str(recognized_name), (x+5, y-5), font, 1, (255, 255, 255), 2)
+            cv2.putText(img, str(accuracy_text), (x+5, y+h-5), font, 1, (255, 255, 0), 1)
 
         cv2.imshow('camera', img)
 
@@ -80,7 +83,8 @@ def AuthenticateFace():
             
 
     # Do a bit of cleanup
-    
     cam.release()
     cv2.destroyAllWindows()
-    return flag
+    
+    # Return BOTH the flag and the person's name
+    return flag, recognized_name

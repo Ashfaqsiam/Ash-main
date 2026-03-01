@@ -4,9 +4,12 @@ import eel
 import time
 import threading 
 import pygetwindow as gw
+import keyboard 
+import re # <-- NEW: We need this to chop the text into sentences
 
 # --- Global flag and Engine Initialization ---
 stop_speaking_flag = False
+interrupt_flag = False  
 speak_lock = threading.Lock()
 
 engine = pyttsx3.init('sapi5')
@@ -14,54 +17,135 @@ voices = engine.getProperty('voices')
 engine.setProperty('voice', voices[0].id)
 engine.setProperty('rate', 174)
 
+# ==========================================
+# --- THE MASTER INTERRUPT (KILL SWITCH) ---
+# ==========================================
+def kill_audio():
+    try:
+        engine.stop()
+    except:
+        pass
+
+def master_interrupt():
+    global interrupt_flag, stop_speaking_flag
+    interrupt_flag = True  
+    stop_speaking_flag = True
+    print("\n[Interrupt] Spacebar pressed. Halting system...")
+    
+    # 1. Update the UI to the hood FIRST
+    try:
+        eel.ShowHood()
+    except:
+        pass
+        
+    # 2. Try to kill audio in the background
+    threading.Thread(target=kill_audio, daemon=True).start()
+
+keyboard.add_hotkey('space', master_interrupt)
+# ==========================================
+
 def onWord(name, location, length):
     global stop_speaking_flag
     if stop_speaking_flag:
-        engine.stop()
+        try:
+            engine.stop()
+        except:
+            pass
 
 engine.connect('started-word', onWord)
 
+# --- THE NEW CHUNKED SPEAK FUNCTION ---
 def speak(text):
-    global stop_speaking_flag
+    global stop_speaking_flag, interrupt_flag
     stop_speaking_flag = False 
     
     with speak_lock:
         try:
             text = str(text)
+            
+            # Safety check before starting
+            if interrupt_flag:
+                return
+                
             eel.DisplayMessage(text)
             eel.receiverText(text)
             
-            if getattr(engine, '_in_loop', False):
-                engine.say(text)
-            else:
-                engine.say(text)
-                engine.runAndWait()
+            # CHUNKING TRICK: Split the paragraph by sentences (. ? ! or new lines)
+            # This prevents Windows from locking the audio thread for 30 seconds straight
+            chunks = re.split(r'(?<=[.!?\n])\s+', text)
+            
+            for chunk in chunks:
+                if not chunk.strip():
+                    continue
+                    
+                # CHECK THE SPACEBAR FLAG BEFORE EVERY SINGLE SENTENCE!
+                if interrupt_flag or stop_speaking_flag:
+                    print("Speech halted by spacebar.")
+                    break # Instantly breaks the loop and stops talking
+                
+                if getattr(engine, '_in_loop', False):
+                    engine.say(chunk)
+                else:
+                    engine.say(chunk)
+                    engine.runAndWait()
+                    
         except Exception as e:
             print(f"Speak Error: {e}")
 
 def stop_speaking():
     global stop_speaking_flag
     stop_speaking_flag = True
-    try:
-        engine.stop()
-    except:
-        pass
+    threading.Thread(target=kill_audio, daemon=True).start()
 
 # --------------------------------------------------------------------
 
 def takecommand():
+    global interrupt_flag
+    interrupt_flag = False  
+
     r = sr.Recognizer()
-    with sr.Microphone() as source:
-        print('listening....')
-        eel.DisplayMessage('listening....')
-        r.pause_threshold = 1
-        r.adjust_for_ambient_noise(source, duration=1)
-        audio = r.listen(source, 10, 6)
+    m = sr.Microphone()
+    
+    print('listening....')
+    eel.DisplayMessage('listening....')
+    
+    with m as source:
+        r.pause_threshold = 0.5         
+        r.non_speaking_duration = 0.3   
+        r.adjust_for_ambient_noise(source, duration=0.5) 
+        
+    audio_queue = []
+
+    def callback(recognizer, audio):
+        audio_queue.append(audio)
+
+    stop_listening = r.listen_in_background(m, callback, phrase_time_limit=8)
+
+    interrupted = False
+    
+    while len(audio_queue) == 0:
+        if interrupt_flag:  
+            print("Listening stopped by master interrupt.")
+            eel.DisplayMessage('Listening cancelled...')
+            interrupted = True
+            break
+        time.sleep(0.05)
+        
+    stop_listening(wait_for_stop=True) 
+
+    if interrupted:
+        return ""
+
+    audio = audio_queue[0]
 
     try:
         print('recognizing')
         eel.DisplayMessage('recognizing....')
         query = r.recognize_google(audio, language='en-in')
+        
+        if interrupt_flag:
+            return ""
+            
         print(f"user said: {query}")
         eel.DisplayMessage(query)
         return query.lower()
@@ -70,12 +154,15 @@ def takecommand():
 
 @eel.expose
 def allCommands(message=1):
+    global interrupt_flag
+    
     if message == 1:
         query = takecommand()
     else:
         query = message
         
-    if not query:
+    if interrupt_flag or not query:
+        eel.ShowHood() 
         return
 
     eel.senderText(query)
@@ -109,19 +196,19 @@ def allCommands(message=1):
                         query = takecommand()
                     whatsApp(contact_no, query, mode, name)
                     
-        # --- NEW: Ash's Learning Engine Trigger ---
         elif "remember that" in query or "remember" in query:
             from engine.features import rememberFact
             rememberFact(query)
             
         else:
-            from engine.features import geminai
-            geminai(query)
+            from engine.features import hybrid_ai_brain
+            hybrid_ai_brain(query)
             
     except Exception as e:
         print(f"Error in allCommands logic: {e}")
     
-    eel.ShowHood()
+    if not interrupt_flag:
+        eel.ShowHood()
 
 # --- THE FINAL BACKGROUND WATCHER BRIDGE ---
 hotword_event = None 
@@ -129,11 +216,8 @@ hotword_event = None
 def trigger_listening_sequence():
     """Brings app to front and triggers listening"""
     try:
-        # 1. Interrupt Current Speech
         stop_speaking()
         
-        # 2. FORCE WINDOW TO FRONT
-        # This ensures the microphone has priority access
         try:
             app_windows = gw.getWindowsWithTitle("Ash")
             if app_windows:
@@ -145,12 +229,10 @@ def trigger_listening_sequence():
         except Exception as e:
             print(f"Focus Error: {e}")
 
-        # 3. Trigger UI (Siri Animation)
         import pyautogui as autogui
         autogui.hotkey('win', 'j') 
         print("[WATCHER] Siri UI Triggered...")
 
-        # 4. Play chime
         def play_chime():
             try:
                 from playsound import playsound
@@ -159,7 +241,6 @@ def trigger_listening_sequence():
                 pass
         threading.Thread(target=play_chime, daemon=True).start()
 
-        # 5. Start Listening
         print("[WATCHER] Mic Opening...")
         eel.spawn(allCommands, 1) 
             

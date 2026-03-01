@@ -8,6 +8,7 @@ import struct
 import subprocess
 import time
 import webbrowser
+import requests 
 from playsound import playsound
 import eel
 import pyaudio
@@ -15,9 +16,10 @@ import pyautogui
 import pywhatkit as kit
 import pvporcupine
 import google.generativeai as genai
+from groq import Groq
 
 from engine.command import speak
-from engine.config import ASSISTANT_NAME, LLM_KEY
+from engine.config import ASSISTANT_NAME, LLM_KEY, GROQ_API_KEY
 from engine.helper import extract_yt_term, markdown_to_text, remove_words
 from hugchat import hugchat
 
@@ -29,7 +31,6 @@ def playAssistantSound():
     music_dir = "www\\assets\\audio\\start_sound.mp3"
     playsound(music_dir)
 
-    
 def openCommand(query):
     query = query.replace(ASSISTANT_NAME, "")
     query = query.replace("open", "")
@@ -64,13 +65,19 @@ def openCommand(query):
         except:
             speak("some thing went wrong")
 
-
 def PlayYoutube(query):
     search_term = extract_yt_term(query)
-    speak("Playing "+search_term+" on YouTube")
-    kit.playonyt(search_term)
-
-
+    
+    # Check if search_term actually found something
+    if search_term is None or search_term.strip() == "":
+        # If the user just said "play this on youtube", we look for "national anthem"
+        search_term = query.replace("on youtube", "").replace("play", "").replace("this", "").strip()
+    
+    if search_term:
+        speak("Playing " + str(search_term) + " on YouTube")
+        kit.playonyt(search_term)
+    else:
+        speak("I'm sorry, I couldn't figure out which video you wanted to play.")
 # --- HOTWORD FUNCTION ---
 def hotword(hotword_event=None):
     porcupine=None
@@ -101,11 +108,8 @@ def hotword(hotword_event=None):
 
             if keyword_index>=0:
                 print("hotword detected")
-                
-                # EI SWITCH-TA PRESS KORA HOYECHE (Event set)
                 if hotword_event:
                     hotword_event.set()
-                
                 time.sleep(1)
                 
     except Exception as e:
@@ -118,7 +122,6 @@ def hotword(hotword_event=None):
             audio_stream.close()
         if paud is not None:
             paud.terminate()
-
 
 # find contacts
 def findContact(query):
@@ -153,15 +156,11 @@ def whatsApp(mobile_no, message, flag, name):
         message = ''
         jarvis_message = "staring video call with "+name
 
-    # Encode the message for URL
     encoded_message = quote(message)
     print(encoded_message)
-    # Construct the URL
     whatsapp_url = f"whatsapp://send?phone={mobile_no}&text={encoded_message}"
-    # Construct the full command
     full_command = f'start "" "{whatsapp_url}"'
 
-    # Open WhatsApp with the constructed URL using cmd.exe
     subprocess.run(full_command, shell=True)
     time.sleep(5)
     subprocess.run(full_command, shell=True)
@@ -174,7 +173,6 @@ def whatsApp(mobile_no, message, flag, name):
     pyautogui.hotkey('enter')
     speak(jarvis_message)
 
-
 # chat bot 
 def chatBot(query):
     user_input = query.lower()
@@ -186,14 +184,12 @@ def chatBot(query):
     speak(response)
     return response
 
-
 # android automation
 def makeCall(name, mobileNo):
     mobileNo =mobileNo.replace(" ", "")
     speak("Calling "+name)
     command = 'adb shell am start -a android.intent.action.CALL -d tel:'+mobileNo
     os.system(command)
-
 
 # to send message
 def sendMessage(message, mobileNo, name):
@@ -204,69 +200,88 @@ def sendMessage(message, mobileNo, name):
     goback(4)
     time.sleep(1)
     keyEvent(3)
-    # open sms app
     tapEvents(136, 2220)
-    #start chat
     tapEvents(819, 2192)
-    # search mobile no
     adbInput(mobileNo)
-    #tap on name
     tapEvents(601, 574)
-    # tap on input
     tapEvents(390, 2270)
-    #message
     adbInput(message)
-    #send
     tapEvents(957, 1397)
     speak("message send successfully to "+name)
 
-
-# --- GEMINI AI FUNCTION (Reads from memory.txt) ---
-def geminai(query):
+# --- THE UNSTOPPABLE HYBRID BRAIN (Gemini 3 -> Groq) ---
+def hybrid_ai_brain(query):
     if not query or query.strip() == "":
         return 
 
     try:
-        query = query.replace(ASSISTANT_NAME, "")
-        query = query.replace("search", "")
+        query = query.replace(ASSISTANT_NAME, "").replace("search", "").strip()
         
         now = datetime.datetime.now()
         current_time = now.strftime("%I:%M %p") 
         current_date = now.strftime("%B %d, %Y") 
         
-        # Pulling the persona from your text file
         persona = ""
         try:
             with open("memory.txt", "r", encoding="utf-8") as file:
                 persona = file.read()
-                
-            # Replace tags with actual time and date
             persona = persona.replace("{time}", current_time).replace("{date}", current_date)
-            
         except FileNotFoundError:
-            print("[Warning] memory.txt not found! Please create it in your main project folder.")
             persona = f"Your name is Ash. You were built by Ashfaq Ahamed. Time is {current_time}. Be helpful."
 
-        genai.configure(api_key=LLM_KEY)
+       # ATTEMPT 1: GEMINI 2.5 FLASH
+        try:
+            print("[Brain] Asking Gemini 2.5 Flash...")
+            genai.configure(api_key=LLM_KEY)
+            
+            # The stable ID is 'gemini-2.5-flash'
+            model = genai.GenerativeModel(
+                model_name="gemini-2.5-flash", 
+                system_instruction=persona
+            )
+            response = model.generate_content(query)
+            filter_text = markdown_to_text(response.text)
+            
+            print(f"Ash (Gemini 2.5) says: {filter_text}") 
+            speak(filter_text)
+            return
 
-        model = genai.GenerativeModel(
-            model_name="gemini-3-flash-preview",
-            system_instruction=persona
-        )
+        except Exception as e:
+            error_message = str(e).lower()
+            if "429" in error_message or "quota" in error_message:
+                print("\n[Warning] Gemini hit its limit! Switching to Groq...")
+            else:
+                print(f"\n[Warning] Gemini failed: {e}. Switching to Groq...")
 
-        response = model.generate_content(query)
-        
-        filter_text = markdown_to_text(response.text)
-        print(f"Ash says: {filter_text}") 
-        speak(filter_text)
-        
-    except Exception as e:
-        error_message = str(e)
-        if "429" in error_message or "Quota" in error_message:
-            print("Rate limit hit! Check your Google Cloud Billing.")
-            speak("I am receiving too many requests right now. Please check my API billing status.")
-        else:
-            print("Gemini Error:", e)
+       # ATTEMPT 2: GROQ
+        try:
+            print("[Brain] Asking Groq...")
+            client = Groq(api_key=GROQ_API_KEY)
+            
+            completion = client.chat.completions.create(
+                model="llama-3.1-8b-instant", # <--- NEW, CURRENT MODEL
+                messages=[
+                    {"role": "system", "content": persona},
+                    {"role": "user", "content": query}
+                ],
+                temperature=0.7,
+                max_tokens=1024,
+            )
+            
+            answer = completion.choices[0].message.content
+            filter_text = markdown_to_text(answer)
+            
+            print(f"Ash (Groq) says: {filter_text}") 
+            speak(filter_text)
+            return
+
+        except Exception as groq_e:
+            print(f"Groq Error: {groq_e}")
+            speak("Both of my brains are currently out of quota. Please give me a minute.")
+
+    except Exception as main_e:
+        print(f"Brain Error: {main_e}")
+        speak("A critical error occurred in my brain functions.")
 
 # --- ASH's LEARNING ENGINE ---
 def rememberFact(query):
@@ -291,10 +306,7 @@ def rememberFact(query):
             print(f"Memory Error: {e}")
             speak("Sorry, I had trouble writing that down in my memory file.")
 
-
-# Settings Modal 
-
-# Assistant name
+# --- Settings Modals ---
 @eel.expose
 def assistantName():
     name = ASSISTANT_NAME
