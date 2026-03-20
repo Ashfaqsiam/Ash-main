@@ -87,4 +87,4 @@ def AuthenticateFace():
     cv2.destroyAllWindows()
     
     # Return BOTH the flag and the person's name
-    return flag, recognized_name
+    return flag, recognized_name 

@@ -156,59 +156,75 @@ def takecommand():
 def allCommands(message=1):
     global interrupt_flag
     
-    if message == 1:
-        query = takecommand()
-    else:
-        query = message
-        
-    if interrupt_flag or not query:
-        eel.ShowHood() 
-        return
-
-    eel.senderText(query)
-        
-    try:
-        if "open" in query:
-            from engine.features import openCommand
-            openCommand(query)
-            
-        elif "on youtube" in query:
-            from engine.features import PlayYoutube
-            PlayYoutube(query)
-            
-        elif any(x in query for x in ["send message", "phone call", "video call"]):
-            from engine.features import findContact, whatsApp, makeCall, sendMessage
-            contact_no, name = findContact(query)
-            if contact_no != 0:
-                speak("Which mode you want to use whatsapp or mobile")
-                preferance = takecommand()
-                if "mobile" in preferance:
-                    if "send message" in query or "send sms" in query: 
-                        speak("what message to send")
-                        msg = takecommand()
-                        sendMessage(msg, contact_no, name)
-                    elif "phone call" in query:
-                        makeCall(name, contact_no)
-                elif "whatsapp" in preferance:
-                    mode = 'message' if "send message" in query else 'call' if "phone call" in query else 'video call'
-                    if mode == 'message':
-                        speak("what message to send")
-                        query = takecommand()
-                    whatsApp(contact_no, query, mode, name)
-                    
-        elif "remember that" in query or "remember" in query:
-            from engine.features import rememberFact
-            rememberFact(query)
-            
+    # --- NEW: CONTINUOUS CONVERSATION LOOP ---
+    while True:
+        if message == 1:
+            query = takecommand()
         else:
-            from engine.features import hybrid_ai_brain
-            hybrid_ai_brain(query)
+            query = message
+            message = 1  # Reset to 1 so the NEXT loop iteration listens to the mic automatically!
             
-    except Exception as e:
-        print(f"Error in allCommands logic: {e}")
-    
-    if not interrupt_flag:
-        eel.ShowHood()
+        # If spacebar is pressed or Ash hears nothing, break the loop and go to sleep
+        if interrupt_flag or not query:
+            eel.ShowHood() 
+            break
+
+        eel.senderText(query)
+        
+        # --- NEW: EXIT COMMANDS ---
+        # If you say any of these words, Ash will say goodbye and go to sleep
+        exit_words = ["bye", "goodbye", "exit", "stop", "go to sleep", "sleep", "shut down", "turn off"]
+        if any(word in query for word in exit_words):
+            speak("Goodbye Sir! Let me know if you need anything else.")
+            eel.ShowHood()
+            break
+            
+        try:
+            if "open" in query:
+                from engine.features import openCommand
+                openCommand(query)
+                
+            elif "on youtube" in query:
+                from engine.features import PlayYoutube
+                PlayYoutube(query)
+                
+            elif any(x in query for x in ["send message", "phone call", "video call"]):
+                from engine.features import findContact, whatsApp, makeCall, sendMessage
+                contact_no, name = findContact(query)
+                if contact_no != 0:
+                    speak("Which mode you want to use whatsapp or mobile")
+                    preferance = takecommand()
+                    if "mobile" in preferance:
+                        if "send message" in query or "send sms" in query: 
+                            speak("what message to send")
+                            msg = takecommand()
+                            sendMessage(msg, contact_no, name)
+                        elif "phone call" in query:
+                            makeCall(name, contact_no)
+                    elif "whatsapp" in preferance:
+                        mode = 'message' if "send message" in query else 'call' if "phone call" in query else 'video call'
+                        if mode == 'message':
+                            speak("what message to send")
+                            query = takecommand()
+                        whatsApp(contact_no, query, mode, name)
+                        
+            elif "remember that" in query or "remember" in query:
+                from engine.features import rememberFact
+                rememberFact(query)
+                
+            else:
+                from engine.features import hybrid_ai_brain
+                hybrid_ai_brain(query)
+                
+        except Exception as e:
+            print(f"Error in allCommands logic: {e}")
+        
+        # Check if the spacebar was pressed while Ash was thinking/talking
+        if interrupt_flag:
+            eel.ShowHood()
+            break
+        
+        # Notice we removed the final eel.ShowHood() here so the loop can keep going!
 
 # --- THE FINAL BACKGROUND WATCHER BRIDGE ---
 hotword_event = None 
@@ -258,3 +274,12 @@ def watch_hotword():
         time.sleep(0.1)
 
 threading.Thread(target=watch_hotword, daemon=True).start()
+
+@eel.expose
+def textCommand(message):
+    """Safely handles typed text from the frontend without freezing the UI"""
+    global interrupt_flag
+    interrupt_flag = False # Reset the kill switch just in case
+    
+    # eel.spawn pushes the continuous loop into the background!
+    eel.spawn(allCommands, message)

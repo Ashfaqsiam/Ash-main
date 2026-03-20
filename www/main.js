@@ -62,20 +62,19 @@ $(document).ready(function () {
     }
     document.addEventListener('keyup', doc_keyUp, false);
 
-    // to play assisatnt 
+    // to play assistant 
     function PlayAssistant(message) {
-
-        if (message != "") {
-
+        if (message.trim() !== "") {
             $("#Oval").attr("hidden", true);
             $("#SiriWave").attr("hidden", false);
-            eel.allCommands(message);
-            $("#chatbox").val("")
+            
+            // This is the magic line that sends the text to your new Python function!
+            eel.textCommand(message)(); 
+            
+            $("#chatbox").val("");
             $("#MicBtn").attr('hidden', false);
             $("#SendBtn").attr('hidden', true);
-
         }
-
     }
 
     // toogle fucntion to hide and display mic and send button 
