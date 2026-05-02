@@ -28,6 +28,7 @@ if __name__ == '__main__':
         p2 = multiprocessing.Process(target=listenHotword, args=(hotword_event,))
         
         p1.start()
+        subprocess.call([r'device.bat'])
         p2.start()
         
         p1.join()
@@ -36,4 +37,4 @@ if __name__ == '__main__':
             p2.terminate()
             p2.join()
 
-        print("system stop")
+        print("system stop") 

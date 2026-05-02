@@ -41,7 +41,6 @@ $(document).ready(function () {
     });
 
     // mic button click event
-
     $("#MicBtn").click(function () {
         eel.playAssistantSound()
         $("#Oval").attr("hidden", true);
@@ -51,8 +50,6 @@ $(document).ready(function () {
 
 
     function doc_keyUp(e) {
-        // this would test for whichever key is 40 (down arrow) and the ctrl key at the same time
-
         if (e.key === 'j' && e.metaKey) {
             eel.playAssistantSound()
             $("#Oval").attr("hidden", true);
@@ -68,7 +65,6 @@ $(document).ready(function () {
             $("#Oval").attr("hidden", true);
             $("#SiriWave").attr("hidden", false);
             
-            // This is the magic line that sends the text to your new Python function!
             eel.textCommand(message)(); 
             
             $("#chatbox").val("");
@@ -77,7 +73,7 @@ $(document).ready(function () {
         }
     }
 
-    // toogle fucntion to hide and display mic and send button 
+    // toggle function to hide and display mic and send button 
     function ShowHideButton(message) {
         if (message.length == 0) {
             $("#MicBtn").attr('hidden', false);
@@ -91,18 +87,14 @@ $(document).ready(function () {
 
     // key up event handler on text box
     $("#chatbox").keyup(function () {
-
         let message = $("#chatbox").val();
         ShowHideButton(message)
-
     });
 
     // send button event handler
     $("#SendBtn").click(function () {
-
         let message = $("#chatbox").val()
         PlayAssistant(message)
-
     });
 
 
@@ -116,12 +108,11 @@ $(document).ready(function () {
     });
 
 
-    // Settings Code
-
+    // Settings Code: UPDATED NAMES TO PREVENT FREEZING
     eel.personalInfo()();
-    eel.displaySysCommand()();
-    eel.displayWebCommand()();
-    eel.displayPhoneBookCommand()();
+    eel.fetchSysCommand()();
+    eel.fetchWebCommand()();
+    eel.fetchPhoneBook()();
 
 
 
@@ -141,7 +132,6 @@ $(document).ready(function () {
     }
 
     // Personal Data Update Button:
-
     $("#UpdateBtn").click(function () {
 
         let OwnerName = $("#InputOwnerName").val();
@@ -164,7 +154,7 @@ $(document).ready(function () {
             const toastLiveExample = document.getElementById('liveToast')
             const toast = new bootstrap.Toast(toastLiveExample)
 
-            $("#ToastMessage").text("All Fields Medatory");
+            $("#ToastMessage").text("All Fields Mandatory");
 
             toast.show()
         }
@@ -177,8 +167,6 @@ $(document).ready(function () {
     function displaySysCommand(array) {
 
         let data = JSON.parse(array);
-        console.log(data)
-
         let placeholder = document.querySelector("#TableData");
         let out = "";
         let index = 0
@@ -190,18 +178,10 @@ $(document).ready(function () {
                         <td class="text-light"> ${data[i][1]} </td>
                         <td class="text-light"> ${data[i][2]} </td>
                         <td class="text-light"> <button id="${data[i][0]}" onClick="SysDeleteID(this.id)" class="btn btn-sm btn-glow-red">Delete</button></td>
-                        
                     </tr>
             `;
-
-            // console.log(data[i][0])
-            // console.log(data[i][1])
-
-
         }
-
         placeholder.innerHTML = out;
-
     }
 
     // Add System Command Button
@@ -217,18 +197,14 @@ $(document).ready(function () {
                 title: "Updated Successfully",
                 icon: "success",
             });
-            eel.displaySysCommand()();
+            eel.fetchSysCommand()(); // UPDATED NAME
             $("#SysCommandKey").val("");
             $("#SysCommandValue").val("");
-
-
         }
         else {
             const toastLiveExample = document.getElementById('liveToast')
             const toast = new bootstrap.Toast(toastLiveExample)
-
-            $("#ToastMessage").text("All Fields Medatory");
-
+            $("#ToastMessage").text("All Fields Mandatory");
             toast.show()
         }
 
@@ -240,8 +216,6 @@ $(document).ready(function () {
     function displayWebCommand(array) {
 
         let data = JSON.parse(array);
-        console.log(data)
-
         let placeholder = document.querySelector("#WebTableData");
         let out = "";
         let index = 0
@@ -253,23 +227,14 @@ $(document).ready(function () {
                         <td class="text-light"> ${data[i][1]} </td>
                         <td class="text-light"> ${data[i][2]} </td>
                         <td class="text-light"> <button id="${data[i][0]}" onClick="WebDeleteID(this.id)" class="btn btn-sm btn-glow-red">Delete</button></td>
-                        
                     </tr>
             `;
-
-            // console.log(data[i][0])
-            // console.log(data[i][1])
-
-
         }
-
         placeholder.innerHTML = out;
-
     }
 
 
     // Add Web Commands
-
     $("#WebCommandAddBtn").click(function () {
 
         let key = $("#WebCommandKey").val();
@@ -282,18 +247,14 @@ $(document).ready(function () {
                 title: "Updated Successfully",
                 icon: "success",
             });
-            eel.displayWebCommand()();
+            eel.fetchWebCommand()(); // UPDATED NAME
             $("#WebCommandKey").val("");
             $("#WebCommandValue").val("");
-
-
         }
         else {
             const toastLiveExample = document.getElementById('liveToast')
             const toast = new bootstrap.Toast(toastLiveExample)
-
-            $("#ToastMessage").text("All Fields Medatory");
-
+            $("#ToastMessage").text("All Fields Mandatory");
             toast.show()
         }
 
@@ -301,13 +262,10 @@ $(document).ready(function () {
 
 
     // Display Phone Book
-
     eel.expose(displayPhoneBookCommand)
     function displayPhoneBookCommand(array) {
 
         let data = JSON.parse(array);
-        console.log(data)
-
         let placeholder = document.querySelector("#ContactTableData");
         let out = "";
         let index = 0
@@ -321,19 +279,13 @@ $(document).ready(function () {
                         <td class="text-light"> ${data[i][3]} </td>
                         <td class="text-light"> ${data[i][4]} </td>
                         <td class="text-light"> <button id="${data[i][0]}" onClick="ContactDeleteID(this.id)" class="btn btn-sm btn-glow-red">Delete</button></td>
-                        
                     </tr>
             `;
-
-
         }
-
         placeholder.innerHTML = out;
-
     }
 
     // Add Contacts to database
-
     $("#AddContactBtn").click(function () {
 
         let Name = $("#InputContactName").val();
@@ -343,12 +295,8 @@ $(document).ready(function () {
 
         if (Name.length > 0 && MobileNo.length > 0) {
 
-            if (Email.length < 0) {
-                Email = "";
-            }
-            else if (City < 0) {
-                City = "";
-            }
+            if (Email.length < 0) { Email = ""; }
+            else if (City < 0) { City = ""; }
 
             eel.InsertContacts(Name, MobileNo, Email, City)
 
@@ -361,47 +309,32 @@ $(document).ready(function () {
             $("#InputContactMobileNo").val("");
             $("#InputContactEmail").val("");
             $("#InputContactCity").val("");
-            eel.displayPhoneBookCommand()()
+            eel.fetchPhoneBook()() // UPDATED NAME
 
         }
         else {
             const toastLiveExample = document.getElementById('liveToast')
             const toast = new bootstrap.Toast(toastLiveExample)
-
-            $("#ToastMessage").text("Name and Mobile number Madatory");
-
+            $("#ToastMessage").text("Name and Mobile number Mandatory");
             toast.show()
         }
 
     });
 
-
-
-
 });
 
+// DELETE FUNCTIONS - ALL UPDATED TO USE NEW NAMES
 function SysDeleteID(clicked_id) {
-
-
-    // console.log(clicked_id);
     eel.deleteSysCommand(clicked_id)
-    eel.displaySysCommand()();
-
+    eel.fetchSysCommand()();
 }
 
 function WebDeleteID(clicked_id) {
-
-
-    // console.log(clicked_id);
     eel.deleteWebCommand(clicked_id)
-    eel.displayWebCommand()();
-
-
+    eel.fetchWebCommand()();
 }
+
 function ContactDeleteID(clicked_id) {
-
-    // console.log(clicked_id);
     eel.deletePhoneBookCommand(clicked_id)
-    eel.displayPhoneBookCommand()();
-
+    eel.fetchPhoneBook()();
 }

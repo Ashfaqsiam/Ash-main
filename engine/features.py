@@ -4,19 +4,26 @@ import os
 from pipes import quote
 import re
 import sqlite3
-import struct
 import subprocess
 import time
 import webbrowser
 import requests 
+import threading
 from playsound import playsound
 import eel
-import pyaudio
 import pyautogui
-import pywhatkit as kit
-import pvporcupine
+import pyaudio
+from vosk import Model, KaldiRecognizer 
 import google.generativeai as genai
 from groq import Groq
+
+# --- NEW VISION IMPORTS ---
+import cv2
+from PIL import Image
+
+# --- FIX: Stop pywhatkit from crashing the app when offline ---
+os.environ['PYWHATKIT_SKIP_INTERNET_CHECK'] = 'true'
+import pywhatkit as kit 
 
 from engine.command import speak
 from engine.config import ASSISTANT_NAME, LLM_KEY, GROQ_API_KEY
@@ -34,7 +41,7 @@ def playAssistantSound():
 def openCommand(query):
     query = query.replace(ASSISTANT_NAME, "")
     query = query.replace("open", "")
-    query.lower()
+    query = query.lower()
 
     app_name = query.strip()
 
@@ -68,9 +75,7 @@ def openCommand(query):
 def PlayYoutube(query):
     search_term = extract_yt_term(query)
     
-    # Check if search_term actually found something
     if search_term is None or search_term.strip() == "":
-        # If the user just said "play this on youtube", we look for "national anthem"
         search_term = query.replace("on youtube", "").replace("play", "").replace("this", "").strip()
     
     if search_term:
@@ -78,52 +83,58 @@ def PlayYoutube(query):
         kit.playonyt(search_term)
     else:
         speak("I'm sorry, I couldn't figure out which video you wanted to play.")
-# --- HOTWORD FUNCTION ---
-def hotword(hotword_event=None):
-    porcupine=None
-    paud=None
-    audio_stream=None
-    
-    # Put your Picovoice Access Key 
-    ACCESS_KEY = ""
 
-    # Windows file path
-    PPN_FILE_PATH = r"D:\Hello-ASH_en_windows_v4_0_0 (1)\Hello-ASH_en_windows_v4_0_0.ppn" 
+# ==========================================
+# --- VOSK ENGINE (100% Free & Offline) ---
+# ==========================================
+def hotword(hotword_event=None):
+    print("\n[DEBUG] 1. Starting Vosk Offline Engine...")
+    model_path = r"D:\model\model" 
     
+    if not os.path.exists(model_path):
+        print(f"\n[CRITICAL ERROR] Could not find Vosk model at {model_path}")
+        return
+
     try:
-        porcupine=pvporcupine.create(
-            access_key=ACCESS_KEY, 
-            keyword_paths=[PPN_FILE_PATH],
-            sensitivities=[0.85]
-        ) 
-        paud=pyaudio.PyAudio()
-        audio_stream=paud.open(rate=porcupine.sample_rate,channels=1,format=pyaudio.paInt16,input=True,frames_per_buffer=porcupine.frame_length)
+        print("[DEBUG] 2. Loading Offline Language Model...")
+        model = Model(model_path)
+        recognizer = KaldiRecognizer(model, 16000, '["hello", "ash", "yash", "wake", "up", "[unk]"]')
         
-        print("Listening for Hello Ash...")
+        print("[DEBUG] 3. Opening Microphone...")
+        paud = pyaudio.PyAudio()
+        audio_stream = paud.open(
+            format=pyaudio.paInt16, 
+            channels=1, 
+            rate=16000, 
+            input=True, 
+            frames_per_buffer=8000
+        )
+        audio_stream.start_stream()
+        
+        print("\n[HOTWORD PROCESS] Active and listening completely offline...")
         
         while True:
-            keyword = audio_stream.read(porcupine.frame_length, exception_on_overflow=False)
-            keyword=struct.unpack_from("h"*porcupine.frame_length,keyword)
-            keyword_index=porcupine.process(keyword)
-
-            if keyword_index>=0:
-                print("hotword detected")
-                if hotword_event:
-                    hotword_event.set()
-                time.sleep(1)
+            data = audio_stream.read(4000, exception_on_overflow=False)
+            if recognizer.AcceptWaveform(data):
+                result = json.loads(recognizer.Result())
+                word = result.get("text", "")
                 
+                if "hello ash" in word or "hello yash" in word or "wake up" in word:
+                    print(f"\n[HOTWORD] >>> DETECTED: '{word}' <<<")
+                    if hotword_event:
+                        hotword_event.set()
+                    time.sleep(8)
+                    
     except Exception as e:
-        print(f"An error occurred: {e}")
-        
+        print(f"\n[CRITICAL ERROR IN VOSK]: {e}")
     finally:
-        if porcupine is not None:
-            porcupine.delete()
-        if audio_stream is not None:
+        try:
+            audio_stream.stop_stream()
             audio_stream.close()
-        if paud is not None:
             paud.terminate()
+        except:
+            pass
 
-# find contacts
 def findContact(query):
     words_to_remove = [ASSISTANT_NAME, 'make', 'a', 'to', 'phone', 'call', 'send', 'message', 'wahtsapp', 'video']
     query = remove_words(query, words_to_remove)
@@ -132,7 +143,6 @@ def findContact(query):
         query = query.strip().lower()
         cursor.execute("SELECT mobile_no FROM contacts WHERE LOWER(name) LIKE ? OR LOWER(name) LIKE ?", ('%' + query + '%', query + '%'))
         results = cursor.fetchall()
-        print(results[0][0])
         mobile_number_str = str(results[0][0])
 
         if not mobile_number_str.startswith('+88'):
@@ -154,10 +164,9 @@ def whatsApp(mobile_no, message, flag, name):
     else:
         target_tab = 6
         message = ''
-        jarvis_message = "staring video call with "+name
+        jarvis_message = "starting video call with "+name
 
     encoded_message = quote(message)
-    print(encoded_message)
     whatsapp_url = f"whatsapp://send?phone={mobile_no}&text={encoded_message}"
     full_command = f'start "" "{whatsapp_url}"'
 
@@ -166,32 +175,26 @@ def whatsApp(mobile_no, message, flag, name):
     subprocess.run(full_command, shell=True)
     
     pyautogui.hotkey('ctrl', 'f')
-
     for i in range(1, target_tab):
         pyautogui.hotkey('tab')
-
     pyautogui.hotkey('enter')
     speak(jarvis_message)
 
-# chat bot 
 def chatBot(query):
     user_input = query.lower()
     chatbot = hugchat.ChatBot(cookie_path="engine\cookies.json")
     id = chatbot.new_conversation()
     chatbot.change_conversation(id)
     response =  chatbot.chat(user_input)
-    print(response)
     speak(response)
     return response
 
-# android automation
 def makeCall(name, mobileNo):
-    mobileNo =mobileNo.replace(" ", "")
+    mobileNo = mobileNo.replace(" ", "")
     speak("Calling "+name)
     command = 'adb shell am start -a android.intent.action.CALL -d tel:'+mobileNo
     os.system(command)
 
-# to send message
 def sendMessage(message, mobileNo, name):
     from engine.helper import replace_spaces_with_percent_s, goback, keyEvent, tapEvents, adbInput
     message = replace_spaces_with_percent_s(message)
@@ -209,14 +212,12 @@ def sendMessage(message, mobileNo, name):
     tapEvents(957, 1397)
     speak("message send successfully to "+name)
 
-# --- THE UNSTOPPABLE HYBRID BRAIN (Gemini 3 -> Groq) ---
 def hybrid_ai_brain(query):
     if not query or query.strip() == "":
         return 
 
     try:
         query = query.replace(ASSISTANT_NAME, "").replace("search", "").strip()
-        
         now = datetime.datetime.now()
         current_time = now.strftime("%I:%M %p") 
         current_date = now.strftime("%B %d, %Y") 
@@ -229,64 +230,45 @@ def hybrid_ai_brain(query):
         except FileNotFoundError:
             persona = f"Your name is Ash. You were built by Ashfaq Ahamed. Time is {current_time}. Be helpful."
 
-       # ATTEMPT 1: GEMINI 2.5 FLASH
+        # ATTEMPT 1: GEMINI
         try:
             print("[Brain] Asking Gemini 2.5 Flash...")
             genai.configure(api_key=LLM_KEY)
-            
-            # The stable ID is 'gemini-2.5-flash'
-            model = genai.GenerativeModel(
-                model_name="gemini-2.5-flash", 
-                system_instruction=persona
-            )
+            model = genai.GenerativeModel(model_name="gemini-2.5-flash", system_instruction=persona)
             response = model.generate_content(query)
             filter_text = markdown_to_text(response.text)
-            
             print(f"Ash (Gemini 2.5) says: {filter_text}") 
             speak(filter_text)
             return
 
         except Exception as e:
-            error_message = str(e).lower()
-            if "429" in error_message or "quota" in error_message:
-                print("\n[Warning] Gemini hit its limit! Switching to Groq...")
-            else:
-                print(f"\n[Warning] Gemini failed: {e}. Switching to Groq...")
+            # --- SILENT FAILOVER ---
+            print(f"\n[Warning] Gemini API hit a limit or failed. Silently routing to Groq...")
 
-       # ATTEMPT 2: GROQ
+        # ATTEMPT 2: GROQ
         try:
             print("[Brain] Asking Groq...")
             client = Groq(api_key=GROQ_API_KEY)
-            
             completion = client.chat.completions.create(
-                model="llama-3.1-8b-instant", # <--- NEW, CURRENT MODEL
-                messages=[
-                    {"role": "system", "content": persona},
-                    {"role": "user", "content": query}
-                ],
+                model="llama-3.1-8b-instant",
+                messages=[{"role": "system", "content": persona}, {"role": "user", "content": query}],
                 temperature=0.7,
                 max_tokens=1024,
             )
-            
             answer = completion.choices[0].message.content
             filter_text = markdown_to_text(answer)
-            
             print(f"Ash (Groq) says: {filter_text}") 
             speak(filter_text)
             return
 
         except Exception as groq_e:
-            print(f"Groq Error: {groq_e}")
-            speak("Both of my brains are currently out of quota. Please give me a minute.")
+            speak("Both of my primary and secondary networks are currently offline.")
 
     except Exception as main_e:
-        print(f"Brain Error: {main_e}")
         speak("A critical error occurred in my brain functions.")
 
-# --- ASH's LEARNING ENGINE ---
 def rememberFact(query):
     query = query.replace(ASSISTANT_NAME, "").strip()
-    
     if "remember that" in query:
         fact = query.split("remember that")[1].strip()
     elif "remember" in query:
@@ -299,18 +281,17 @@ def rememberFact(query):
         try:
             with open("memory.txt", "a", encoding="utf-8") as file:
                 file.write(f"\n- {fact.capitalize()}.")
-            
-            print(f"[MEMORY UPDATED]: {fact}")
             speak(f"Got it. I will remember that {fact}.")
-        except Exception as e:
-            print(f"Memory Error: {e}")
-            speak("Sorry, I had trouble writing that down in my memory file.")
+        except Exception:
+            speak("Sorry, I had trouble writing that down.")
 
-# --- Settings Modals ---
+# ====================================================================
+# --- SETTINGS MODALS (Renamed Python side to avoid naming collisions) ---
+# ====================================================================
+
 @eel.expose
 def assistantName():
-    name = ASSISTANT_NAME
-    return name
+    return ASSISTANT_NAME
 
 @eel.expose
 def personalInfo():
@@ -327,26 +308,18 @@ def personalInfo():
 def updatePersonalInfo(name, designation, mobileno, email, city):
     cursor.execute("SELECT COUNT(*) FROM info")
     count = cursor.fetchone()[0]
-
     if count > 0:
-        cursor.execute(
-            '''UPDATE info 
-               SET name=?, designation=?, mobileno=?, email=?, city=?''',
-            (name, designation, mobileno, email, city)
-        )
+        cursor.execute('''UPDATE info SET name=?, designation=?, mobileno=?, email=?, city=?''',
+            (name, designation, mobileno, email, city))
     else:
-        cursor.execute(
-            '''INSERT INTO info (name, designation, mobileno, email, city) 
-               VALUES (?, ?, ?, ?, ?)''',
-            (name, designation, mobileno, email, city)
-        )
-
+        cursor.execute('''INSERT INTO info (name, designation, mobileno, email, city) VALUES (?, ?, ?, ?, ?)''',
+            (name, designation, mobileno, email, city))
     con.commit()
     personalInfo()
     return 1
 
 @eel.expose
-def displaySysCommand():
+def fetchSysCommand():
     cursor.execute("SELECT * FROM sys_command")
     results = cursor.fetchall()
     jsonArr = json.dumps(results)
@@ -360,12 +333,11 @@ def deleteSysCommand(id):
 
 @eel.expose
 def addSysCommand(key, value):
-    cursor.execute(
-        '''INSERT INTO sys_command VALUES (?, ?, ?)''', (None,key, value))
+    cursor.execute('''INSERT INTO sys_command VALUES (?, ?, ?)''', (None, key, value))
     con.commit()
 
 @eel.expose
-def displayWebCommand():
+def fetchWebCommand():
     cursor.execute("SELECT * FROM web_command")
     results = cursor.fetchall()
     jsonArr = json.dumps(results)
@@ -374,8 +346,7 @@ def displayWebCommand():
 
 @eel.expose
 def addWebCommand(key, value):
-    cursor.execute(
-        '''INSERT INTO web_command VALUES (?, ?, ?)''', (None, key, value))
+    cursor.execute('''INSERT INTO web_command VALUES (?, ?, ?)''', (None, key, value))
     con.commit()
 
 @eel.expose
@@ -384,7 +355,7 @@ def deleteWebCommand(id):
     con.commit()
 
 @eel.expose
-def displayPhoneBookCommand():
+def fetchPhoneBook():
     cursor.execute("SELECT * FROM contacts")
     results = cursor.fetchall()
     jsonArr = json.dumps(results)
@@ -398,6 +369,133 @@ def deletePhoneBookCommand(id):
 
 @eel.expose
 def InsertContacts(Name, MobileNo, Email, City):
-    cursor.execute(
-        '''INSERT INTO contacts VALUES (?, ?, ?, ?, ?)''', (None,Name, MobileNo, Email, City))
+    cursor.execute('''INSERT INTO contacts VALUES (?, ?, ?, ?, ?)''', (None, Name, MobileNo, Email, City))
     con.commit()
+
+# ==========================================
+# --- ASH VISION SYSTEM (Memory-Only Mode) ---
+# ==========================================
+def ash_vision(query):
+    cap = cv2.VideoCapture(0)
+    ret, frame = cap.read()
+    cap.release() 
+    
+    if not ret:
+        speak("Camera error.")
+        return
+
+    print("[VISION] Snapped and analyzing in memory...")
+    
+    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    img = Image.fromarray(rgb_frame)
+    
+    try:
+        genai.configure(api_key=LLM_KEY)
+        
+        smart_instruction = """
+        You are Ash, an advanced AI assistant. The user is showing you an image. 
+        1. If they simply ask "what is this", identify the main object in one short sentence.
+        2. If they ask for specific details (like nutrition, specs, price, or history), act as an expert analyst. Provide a highly concise, factual breakdown. 
+        Do not use filler words like "I can see" or "This is a". Just deliver the data directly.
+        """
+        
+        model = genai.GenerativeModel(
+            model_name="gemini-2.5-flash",
+            system_instruction=smart_instruction
+        )
+        
+        if query.strip() in ["what is this", "look at this", "what am i holding"]:
+            vision_prompt = "Identify the primary object."
+        else:
+            vision_prompt = query
+            
+        response = model.generate_content([vision_prompt, img])
+        
+        filter_text = markdown_to_text(response.text)
+        print(f"Ash (Vision) says: {filter_text}")
+        speak(filter_text)
+        
+    except Exception as e:
+        print(f"[VISION ERROR]: {e}")
+        speak("Sir, my optical sensors are currently offline due to quota limits or network errors.")
+
+# ==========================================
+# --- ASH ALARM SYSTEM (Bulletproof Native) ---
+# ==========================================
+def set_alarm(time_string):
+    """Uses PyAutoGUI to physically set an alarm with higher reliability"""
+    speak(f"Preparing to set a permanent alarm for {time_string}.")
+    
+    try:
+        # 1. Open the Windows Run dialog (Win + R)
+        pyautogui.hotkey('win', 'r')
+        time.sleep(0.5)
+        
+        # 2. Type the command to open the Windows Clock app
+        pyautogui.write('explorer shell:Appsfolder\\Microsoft.WindowsAlarms_8wekyb3d8bbwe!App')
+        time.sleep(0.5)
+        pyautogui.press('enter')
+        
+        speak("Opening Windows Alarms. Please do not touch the mouse or keyboard.")
+        
+        # 3. Wait longer for the app to load fully
+        time.sleep(4)
+        
+        # Maximize the window to ensure the UI is consistent
+        pyautogui.hotkey('win', 'up')
+        time.sleep(1)
+        
+        # 4. Press 'Ctrl + N' to add a new alarm
+        pyautogui.hotkey('ctrl', 'n')
+        time.sleep(1.5) # Wait for the 'New Alarm' animation to finish
+        
+        # 5. Clean and parse the time
+        clean_time = time_string.replace(".", "").strip().lower()
+        if ":" not in clean_time:
+            if "am" in clean_time:
+                clean_time = clean_time.replace("am", ":00 am").strip()
+            elif "pm" in clean_time:
+                clean_time = clean_time.replace("pm", ":00 pm").strip()
+                
+        parts = clean_time.replace("am", "").replace("pm", "").strip().split(":")
+        
+        # Pad with zeros so "2" becomes "02", which types much better in the app
+        hour = parts[0].zfill(2) 
+        minute = parts[1].zfill(2) if len(parts) > 1 else "00"
+        
+        # 6. Execute the typing sequence (with slight delays between keystrokes)
+        pyautogui.write(hour, interval=0.1)
+        time.sleep(0.5)
+        
+        pyautogui.press('tab')
+        time.sleep(0.5)
+        
+        pyautogui.write(minute, interval=0.1)
+        time.sleep(0.5)
+        
+        # Only tab to AM/PM if the user specified it (respects 24hr clocks)
+        if "am" in clean_time or "pm" in clean_time:
+            pyautogui.press('tab')
+            time.sleep(0.5)
+            # Pressing 'a' or 'p' is much safer than the up/down arrows
+            if "am" in clean_time:
+                pyautogui.press('a')
+            else:
+                pyautogui.press('p')
+                
+        time.sleep(1)
+        
+        # 7. Save the alarm (Try both Ctrl+S and Enter to be absolutely sure)
+        pyautogui.hotkey('ctrl', 's')
+        time.sleep(0.5)
+        pyautogui.press('enter')
+        
+        # Close the clock app so it doesn't clutter your screen
+        time.sleep(1)
+        pyautogui.hotkey('alt', 'f4')
+        
+        speak(f"Permanent alarm successfully saved for {clean_time}.")
+        
+    except Exception as e:
+        print(f"Alarm Error: {e}")
+        speak("I encountered an error while trying to operate the Windows Alarm app.")

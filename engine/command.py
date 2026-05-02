@@ -188,7 +188,7 @@ def allCommands(message=1):
                 from engine.features import PlayYoutube
                 PlayYoutube(query)
                 
-            elif any(x in query for x in ["send message", "phone call", "video call"]):
+            elif any(x in query for x in ["send message", "phone call", "video call", "make a call", "call", "message"]):
                 from engine.features import findContact, whatsApp, makeCall, sendMessage
                 contact_no, name = findContact(query)
                 if contact_no != 0:
@@ -211,6 +211,28 @@ def allCommands(message=1):
             elif "remember that" in query or "remember" in query:
                 from engine.features import rememberFact
                 rememberFact(query)
+
+            # ==========================================
+            # --- NEW: ASH ALARM COMMAND ---
+            # ==========================================
+            elif "set alarm" in query or "set an alarm" in query:
+                speak("For what time, Sir? Please say the hour and minute, like 6:30 AM.")
+                
+                # Ash will listen immediately for your time input
+                alarm_time = takecommand()
+                
+                if alarm_time != "":
+                    from engine.features import set_alarm
+                    set_alarm(alarm_time)
+                else:
+                    speak("I didn't catch the time. Alarm cancelled.")
+                
+            # ==========================================
+            # --- ASH VISION COMMANDS ---
+            # ==========================================
+            elif any(x in query for x in ["what is this", "look at this", "what am i holding", "what is in front of you", "can you see this"]):
+                from engine.features import ash_vision
+                ash_vision(query)
                 
             else:
                 from engine.features import hybrid_ai_brain
