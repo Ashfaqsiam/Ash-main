@@ -338,3 +338,77 @@ function ContactDeleteID(clicked_id) {
     eel.deletePhoneBookCommand(clicked_id)
     eel.fetchPhoneBook()();
 }
+
+// ==========================================
+// --- NEW: AUTHENTICATION HUB LOGIC ---
+// ==========================================
+
+function initiateAuth(method) {
+    const statusText = document.getElementById('status-text');
+    const allButtons = document.querySelectorAll('.cyber-btn');
+
+    // 1. Disable all buttons so the user doesn't click twice
+    allButtons.forEach(btn => {
+        btn.style.opacity = '0.5';
+        btn.style.pointerEvents = 'none';
+    });
+
+    // 2. Update UI based on the choice and ping Python
+    if (method === 'face') {
+        statusText.innerText = "[ Starting Facial Scanner... ]";
+        statusText.style.color = "#00f3ff";
+        if (typeof eel.start_face_auth === "function") {
+            eel.start_face_auth();
+        } else {
+            console.warn("Python function start_face_auth not found.");
+        }
+        
+    } else if (method === 'voice') {
+        statusText.innerText = "[ Initializing Voice Protocol... ]";
+        statusText.style.color = "#00f3ff";
+        if (typeof eel.start_voice_auth === "function") {
+            eel.start_voice_auth(); 
+        } else {
+            console.warn("Python function start_voice_auth not found.");
+        }
+        
+    } else if (method === 'guest') {
+        statusText.innerText = "[ Bypassing Security. Booting Main System... ]";
+        statusText.style.color = "#a8b1c2";
+        if (typeof eel.start_guest_mode === "function") {
+            eel.start_guest_mode(); 
+        } else {
+            console.warn("Python function start_guest_mode not found.");
+        }
+    }
+}
+
+// A function Python can call to reset the UI if auth fails (e.g., face not recognized)
+eel.expose(resetAuthUI);
+function resetAuthUI(errorMessage) {
+    const statusText = document.getElementById('status-text');
+    const allButtons = document.querySelectorAll('.cyber-btn');
+
+    statusText.innerText = "[ Error: " + errorMessage + " ]";
+    statusText.style.color = "#ff4444";
+
+    allButtons.forEach(btn => {
+        btn.style.opacity = '1';
+        btn.style.pointerEvents = 'auto';
+    });
+}
+
+// ==========================================
+// --- NEW: SCREEN TRANSITION FUNCTION ---
+// ==========================================
+eel.expose(showAuthScreen);
+function showAuthScreen() {
+    // Hide the blue loader
+    $("#Loader").attr("hidden", true);
+    
+    // Show the glowing buttons
+    $("#AuthScreen").attr("hidden", false);
+    
+    // Update the bottom text
+    $("#WishMessage").text("Awaiting Authentication...");
+}

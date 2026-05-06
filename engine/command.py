@@ -7,6 +7,10 @@ import pygetwindow as gw
 import keyboard 
 import re # <-- NEW: We need this to chop the text into sentences
 
+# --- NEW: Offline STT Imports ---
+import json
+from vosk import Model, KaldiRecognizer
+
 # --- Global flag and Engine Initialization ---
 stop_speaking_flag = False
 interrupt_flag = False  
@@ -138,9 +142,12 @@ def takecommand():
 
     audio = audio_queue[0]
 
+    # --- UPDATED: GOOGLE TO VOSK OFFLINE FALLBACK ---
     try:
         print('recognizing')
         eel.DisplayMessage('recognizing....')
+        
+        # ATTEMPT 1: Try Google
         query = r.recognize_google(audio, language='en-in')
         
         if interrupt_flag:
@@ -149,8 +156,37 @@ def takecommand():
         print(f"user said: {query}")
         eel.DisplayMessage(query)
         return query.lower()
-    except Exception:
+        
+    except sr.UnknownValueError:
+        # Google reached but didn't understand the words
         return ""
+        
+    except Exception as e:
+        # ATTEMPT 2: NO INTERNET DETECTED! Fallback to Offline Vosk
+        print("[STT] Connection failed! Processing audio locally with Vosk...")
+        eel.DisplayMessage('Offline processing....')
+        
+        try:
+            # Load your local Vosk model
+            model = Model(r"D:\model\model") 
+            
+            # Process the exact audio we already captured
+            rec = KaldiRecognizer(model, audio.sample_rate)
+            rec.AcceptWaveform(audio.get_raw_data())
+            
+            result = json.loads(rec.FinalResult())
+            query = result.get("text", "")
+            
+            if interrupt_flag:
+                return ""
+                
+            print(f"user said (offline): {query}")
+            eel.DisplayMessage(query)
+            return query.lower()
+            
+        except Exception as vosk_e:
+            print(f"[Vosk Offline Error]: {vosk_e}")
+            return ""
 
 @eel.expose
 def allCommands(message=1):

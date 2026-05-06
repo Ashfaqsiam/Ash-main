@@ -9,6 +9,7 @@ import time
 import webbrowser
 import requests 
 import threading
+import socket  # NEW: Required for the internet check
 from playsound import playsound
 import eel
 import pyautogui
@@ -21,9 +22,7 @@ from groq import Groq
 import cv2
 from PIL import Image
 
-# --- FIX: Stop pywhatkit from crashing the app when offline ---
-os.environ['PYWHATKIT_SKIP_INTERNET_CHECK'] = 'true'
-import pywhatkit as kit 
+
 
 from engine.command import speak
 from engine.config import ASSISTANT_NAME, LLM_KEY, GROQ_API_KEY
@@ -79,11 +78,15 @@ def PlayYoutube(query):
         search_term = query.replace("on youtube", "").replace("play", "").replace("this", "").strip()
     
     if search_term:
-        speak("Playing " + str(search_term) + " on YouTube")
-        kit.playonyt(search_term)
+        if is_online():
+            speak("Playing " + str(search_term) + " on YouTube")
+            # We import it HERE so it doesn't crash the app on startup when offline
+            import pywhatkit as kit
+            kit.playonyt(search_term)
+        else:
+            speak("Sir, the system is offline. I cannot connect to YouTube right now.")
     else:
         speak("I'm sorry, I couldn't figure out which video you wanted to play.")
-
 # ==========================================
 # --- VOSK ENGINE (100% Free & Offline) ---
 # ==========================================
@@ -212,7 +215,55 @@ def sendMessage(message, mobileNo, name):
     tapEvents(957, 1397)
     speak("message send successfully to "+name)
 
+# ====================================================================
+# --- OFFLINE/ONLINE ROUTING PROTOCOLS ---
+# ====================================================================
+
+def is_online():
+    """Returns True if the computer has internet access, False otherwise."""
+    try:
+        # Pings Cloudflare's DNS server to verify real internet connectivity
+        socket.create_connection(("1.1.1.1", 53), timeout=1.5)
+        return True
+    except OSError:
+        return False
+
+def ask_ollama(prompt, persona):
+    """Sends the prompt to your local Ollama server running Llama 3."""
+    url = "http://localhost:11434/api/generate"
+    
+    # 1. Force the AI to be concise. Less text generated = Much faster response time.
+    speed_persona = persona + " IMPORTANT: Keep your answers extremely brief, direct, and conversational. 1 to 2 sentences maximum. Do not generate lists or essays."
+    
+    payload = {
+        "model": "llama3", 
+        "prompt": prompt,
+        "system": speed_persona,
+        "stream": False,
+        "keep_alive": "1h", # 2. Keeps the model loaded in RAM for 1 hour so it responds instantly next time
+        "options": {
+            "num_ctx": 1024,     # 3. Limits the "reading" memory to speed up processing
+            "num_predict": 100   # 4. Hard-caps the output to ~100 tokens so it never writes an essay
+        }
+    }
+    
+    try:
+        print("[DEBUG] Sending optimized request to Local Brain...")
+        response = requests.post(url, json=payload, timeout=60)
+        response.raise_for_status()
+        
+        data = response.json()
+        return data['response']
+        
+    except requests.exceptions.ConnectionError:
+        return "Sir, I am offline, and my local Ollama server is not running in the background."
+    except Exception as e:
+        print(f"[Ollama Error] {e}")
+        return "I encountered an error while trying to access my local brain."
+
+
 def hybrid_ai_brain(query):
+    """The master brain router. Cloud -> Groq -> Local Ollama"""
     if not query or query.strip() == "":
         return 
 
@@ -230,39 +281,56 @@ def hybrid_ai_brain(query):
         except FileNotFoundError:
             persona = f"Your name is Ash. You were built by Ashfaq Ahamed. Time is {current_time}. Be helpful."
 
-        # ATTEMPT 1: GEMINI
-        try:
-            print("[Brain] Asking Gemini 2.5 Flash...")
-            genai.configure(api_key=LLM_KEY)
-            model = genai.GenerativeModel(model_name="gemini-2.5-flash", system_instruction=persona)
-            response = model.generate_content(query)
-            filter_text = markdown_to_text(response.text)
-            print(f"Ash (Gemini 2.5) says: {filter_text}") 
+        # =======================================
+        # --- ONLINE MODE (Gemini / Groq) ---
+        # =======================================
+        if is_online():
+            # ATTEMPT 1: GEMINI
+            try:
+                print("[Brain] Internet Detected. Asking Gemini 2.5 Flash...")
+                genai.configure(api_key=LLM_KEY)
+                model = genai.GenerativeModel(model_name="gemini-2.5-flash", system_instruction=persona)
+                response = model.generate_content(query)
+                filter_text = markdown_to_text(response.text)
+                print(f"Ash (Gemini 2.5) says: {filter_text}") 
+                speak(filter_text)
+                return
+
+            except Exception as e:
+                # --- SILENT FAILOVER ---
+                print(f"\n[Warning] Gemini API hit a limit or failed. Silently routing to Groq...")
+
+            # ATTEMPT 2: GROQ
+            try:
+                print("[Brain] Asking Groq...")
+                client = Groq(api_key=GROQ_API_KEY)
+                completion = client.chat.completions.create(
+                    model="llama-3.1-8b-instant",
+                    messages=[{"role": "system", "content": persona}, {"role": "user", "content": query}],
+                    temperature=0.7,
+                    max_tokens=1024,
+                )
+                answer = completion.choices[0].message.content
+                filter_text = markdown_to_text(answer)
+                print(f"Ash (Groq) says: {filter_text}") 
+                speak(filter_text)
+                return
+
+            except Exception as groq_e:
+                speak("Both of my primary cloud networks are currently offline.")
+
+        # =======================================
+        # --- OFFLINE MODE (Local Ollama) ---
+        # =======================================
+        else:
+            print("[Brain] No Internet! Routing to Local Brain (Ollama Llama 3)...")
+            speak("Network connection lost. Booting local neural network.")
+            
+            fallback_response = ask_ollama(query, persona)
+            filter_text = markdown_to_text(fallback_response)
+            
+            print(f"Ash (Local Llama 3) says: {filter_text}")
             speak(filter_text)
-            return
-
-        except Exception as e:
-            # --- SILENT FAILOVER ---
-            print(f"\n[Warning] Gemini API hit a limit or failed. Silently routing to Groq...")
-
-        # ATTEMPT 2: GROQ
-        try:
-            print("[Brain] Asking Groq...")
-            client = Groq(api_key=GROQ_API_KEY)
-            completion = client.chat.completions.create(
-                model="llama-3.1-8b-instant",
-                messages=[{"role": "system", "content": persona}, {"role": "user", "content": query}],
-                temperature=0.7,
-                max_tokens=1024,
-            )
-            answer = completion.choices[0].message.content
-            filter_text = markdown_to_text(answer)
-            print(f"Ash (Groq) says: {filter_text}") 
-            speak(filter_text)
-            return
-
-        except Exception as groq_e:
-            speak("Both of my primary and secondary networks are currently offline.")
 
     except Exception as main_e:
         speak("A critical error occurred in my brain functions.")

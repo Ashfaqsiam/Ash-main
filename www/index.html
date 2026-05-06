@@ -34,6 +34,40 @@
                 <div class="col-lg-12">
                     <div class="d-flex justify-content-center align-items-center" style="height: 80vh;">
                         <div>
+                            <!-- ========================================== -->
+                            <!-- AUTHENTICATION HUB (HIDDEN BY DEFAULT) -->
+                            <!-- ========================================== -->
+                            <div id="AuthScreen" class="auth-wrapper mb-4" hidden>
+                                <div class="auth-panel">
+                                    <div class="core-spinner"></div>
+                                    <h1 class="system-title">A.S.H.</h1>
+                                    <p class="system-subtitle">System Initialization Protocol</p>
+
+                                    <div class="auth-grid">
+                                        <button class="cyber-btn primary-btn" onclick="initiateAuth('face')">
+                                            <span class="icon"><i class="bi bi-person-bounding-box"></i></span>
+                                            <span class="btn-text">Facial Recognition</span>
+                                        </button>
+                                        <button class="cyber-btn primary-btn" onclick="initiateAuth('voice')">
+                                            <span class="icon"><i class="bi bi-mic"></i></span>
+                                            <span class="btn-text">Voice Print Match</span>
+                                        </button>
+                                    </div>
+
+                                    <div class="divider">
+                                        <span>OR</span>
+                                    </div>
+
+                                    <button class="cyber-btn secondary-btn" onclick="initiateAuth('guest')">
+                                        <span class="icon"><i class="bi bi-unlock"></i></span>
+                                        <span class="btn-text">Bypass & Initialize (Guest)</span>
+                                    </button>
+                                    <p id="status-text" class="status-text">Awaiting input...</p>
+                                </div>
+                            </div>
+                            <!-- ========================================== -->
+
+                            <!-- Original Loader (VISIBLE BY DEFAULT NOW) -->
                             <div id="Loader" class="svg-frame mb-4">
                                 <!--base-->
                                 <svg style="--i:0;">
@@ -247,6 +281,8 @@
                                 </svg>
 
                             </div>
+
+                            <!-- Lottie Auth Animations -->
                             <div id="FaceAuth" class="mb-4" hidden>
                                 <lottie-player src="https://assets2.lottiefiles.com/temp/lf20_XcJCfR.json"
                                     background="transparent" speed="1" style="width: 300px; height: 300px;" loop
@@ -266,13 +302,14 @@
                         </div>
                     </div>
                     <div class="d-flex justify-content-center align-items-center">
-                        <h1 id="WishMessage" class="text-center text-light text mt-4 siri-message">Initializing...</h1>
+                        <h1 id="WishMessage" class="text-center text-light text mt-4 siri-message">Initializing System...</h1>
                     </div>
                 </div>
 
             </div>
         </section>
 
+        <!-- (The rest of your code remains exactly the same below here) -->
         <section id="Oval" class="mb-4" hidden>
 
             <div class="row">
@@ -486,10 +523,6 @@
                                             data-bs-target="#WebCommand" type="button" role="tab"
                                             aria-controls="WebCommand" aria-selected="false">Web
                                         </button>
-                                        <!-- <button class="nav-link btn-style" id="HelpCommand-tab" data-bs-toggle="pill"
-                                            data-bs-target="#HelpCommand" type="button" role="tab"
-                                            aria-controls="HelpCommand" aria-selected="false">
-                                            Help</button> -->
                                     </div>
                                     <div class="tab-content" id="v-pills-tabContent">
 
@@ -532,14 +565,9 @@
                                                         </thead>
                                                         <tbody id="TableData">
 
-
                                                         </tbody>
                                                     </table>
                                                 </div>
-
-
-
-
                                             </div>
                                         </div>
 
@@ -582,14 +610,9 @@
                                                         </thead>
                                                         <tbody id="WebTableData">
 
-
                                                         </tbody>
                                                     </table>
                                                 </div>
-
-
-
-
                                             </div>
 
                                         </div>
@@ -599,12 +622,10 @@
                                             <h1>Developed By</h1>
                                             <h3>Ashfaq Ahamed</h3>
 
-
                                         </div>
                                     </div>
                                 </div>
                             </div>
-
 
                         </div>
 
@@ -645,16 +666,10 @@
                                                     </thead>
                                                     <tbody id="ContactTableData">
 
-
                                                     </tbody>
                                                 </table>
                                             </div>
-
-
-
-
                                         </div>
-
 
                                     </div>
 
@@ -743,11 +758,11 @@
     <!-- sweet Alert -->
     <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
 
+    <!-- EEL MUST BE LOADED FIRST -->
+    <script type="text/javascript" src="/eel.js"></script>
+    
     <script src="main.js"></script>
     <script src="controller.js"></script>
-    <script src="/eel.js"></script>
-
 
 </body>
-
 </html>
