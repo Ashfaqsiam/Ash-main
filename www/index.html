@@ -8,19 +8,12 @@
 
     <link rel="shortcut icon" href="assets/img/logo.ico" type="image/x-icon">
 
-    <!-- Bootsrap -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
-        integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
-    <!-- Bootsrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="assets/vendore/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/vendore/bootstrap-icons/bootstrap-icons.css">
 
-    <!-- Particle js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.8.3/modernizr.min.js"
-        type="text/javascript"></script>
+    <script src="assets/vendore/modernizr.min.js" type="text/javascript"></script>
 
-    <!-- Texllate  -->
     <link rel="stylesheet" href="assets/vendore/texllate/animate.css">
-
     <link rel="stylesheet" href="style.css">
 
 </head>
@@ -34,9 +27,6 @@
                 <div class="col-lg-12">
                     <div class="d-flex justify-content-center align-items-center" style="height: 80vh;">
                         <div>
-                            <!-- ========================================== -->
-                            <!-- AUTHENTICATION HUB (HIDDEN BY DEFAULT) -->
-                            <!-- ========================================== -->
                             <div id="AuthScreen" class="auth-wrapper mb-4" hidden>
                                 <div class="auth-panel">
                                     <div class="core-spinner"></div>
@@ -65,11 +55,7 @@
                                     <p id="status-text" class="status-text">Awaiting input...</p>
                                 </div>
                             </div>
-                            <!-- ========================================== -->
-
-                            <!-- Original Loader (VISIBLE BY DEFAULT NOW) -->
                             <div id="Loader" class="svg-frame mb-4">
-                                <!--base-->
                                 <svg style="--i:0;">
                                     <g id="big-outter">
                                         <g id="squares">
@@ -132,7 +118,6 @@
                                         stroke="#00AAFF" stroke-width="8" mask="url(#path-2-inside-1_115_2)" />
                                 </svg>
 
-                                <!--big centro-->
                                 <svg style="--i:1;">
                                     <g id="big-centro">
                                         <circle id="Ellipse 19" cx="227.5" cy="224.5" r="158" stroke="#00AAFF" />
@@ -208,7 +193,6 @@
                                     </g>
                                 </svg>
 
-                                <!--solo lines-->
                                 <svg style="--i:2;">
                                     <g id="solo-lines">
                                         <g id="left-line">
@@ -232,7 +216,6 @@
                                     </g>
                                 </svg>
 
-                                <!--outter center-->
                                 <svg style="--i:3;">
                                     <g id="outter-center">
                                         <g id="Ellipse 33">
@@ -260,7 +243,6 @@
                                     </g>
                                 </svg>
 
-                                <!--center lines-->
                                 <svg style="--i:4;">
                                     <g id="center-lines">
                                         <circle id="Ellipse 36" cx="225.5" cy="224.5" r="93" stroke="#00AAFF" />
@@ -270,7 +252,6 @@
                                     </g>
                                 </svg>
 
-                                <!--center-->
                                 <svg style="--i:5;">
                                     <g id="center">
                                         <path id="center_2"
@@ -282,7 +263,6 @@
 
                             </div>
 
-                            <!-- Lottie Auth Animations -->
                             <div id="FaceAuth" class="mb-4" hidden>
                                 <lottie-player src="https://assets2.lottiefiles.com/temp/lf20_XcJCfR.json"
                                     background="transparent" speed="1" style="width: 300px; height: 300px;" loop
@@ -309,7 +289,6 @@
             </div>
         </section>
 
-        <!-- (The rest of your code remains exactly the same below here) -->
         <section id="Oval" class="mb-4" hidden>
 
             <div class="row">
@@ -375,7 +354,6 @@
         </section>
     </div>
 
-    <!-- Chat Box -->
     <div class="offcanvas offcanvas-start chat-canvas" data-bs-scroll="true" data-bs-backdrop="false" tabindex="-1"
         id="offcanvasScrolling" aria-labelledby="offcanvasScrollingLabel">
         <div class="offcanvas-header">
@@ -383,12 +361,9 @@
             <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
         </div>
         <div id="chat-canvas-body" class="offcanvas-body">
-            <!-- Chatting code here -->
-
-        </div>
+            </div>
     </div>
 
-    <!-- Modal Settings-->
     <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-xl">
             <div class="modal-content glass-effect">
@@ -414,7 +389,6 @@
                     </nav>
                     <div class="tab-content" id="nav-tabContent">
 
-                        <!-- Tab-1 -->
                         <div class="tab-pane fade show active" id="nav-home" role="tabpanel"
                             aria-labelledby="nav-home-tab" tabindex="0">
                             <div class="d-flex align-items-start mt-4">
@@ -426,13 +400,9 @@
                                     <button class="nav-link btn-style" id="EditProfileTab-tab" data-bs-toggle="pill"
                                         data-bs-target="#EditProfileTab" type="button" role="tab"
                                         aria-controls="EditProfileTab" aria-selected="false">Edit</button>
-                                    <!-- <button class="nav-link btn-style" id="AboutTab-tab" data-bs-toggle="pill"
-                                        data-bs-target="#AboutTab" type="button" role="tab" aria-controls="AboutTab"
-                                        aria-selected="false">About</button> -->
                                 </div>
                                 <div class="tab-content" id="v-pills-tabContent">
 
-                                    <!-- Link 1 -->
                                     <div class="tab-pane fade show active" id="ProfileTab" role="tabpanel"
                                         aria-labelledby="ProfileTab-tab">
 
@@ -455,7 +425,6 @@
 
                                     </div>
 
-                                    <!-- Link 2 -->
                                     <div class="tab-pane fade" id="EditProfileTab" role="tabpanel"
                                         aria-labelledby="EditProfileTab-tab">
 
@@ -493,7 +462,6 @@
 
                                     </div>
 
-                                    <!-- Link 3 -->
                                     <div class="tab-pane fade" id="AboutTab" role="tabpanel"
                                         aria-labelledby="AboutTab-tab">
 
@@ -506,7 +474,6 @@
                             </div>
                         </div>
 
-                        <!-- Tab 2 -->
                         <div class="tab-pane fade" id="nav-profile" role="tabpanel" aria-labelledby="nav-profile-tab"
                             tabindex="0">
 
@@ -526,7 +493,6 @@
                                     </div>
                                     <div class="tab-content" id="v-pills-tabContent">
 
-                                        <!-- System Command Section -->
                                         <div class="tab-pane fade show active" id="SystemCommand" role="tabpanel"
                                             aria-labelledby="SystemCommand-tab">
 
@@ -571,7 +537,6 @@
                                             </div>
                                         </div>
 
-                                        <!-- Web Command Section -->
                                         <div class="tab-pane fade" id="WebCommand" role="tabpanel"
                                             aria-labelledby="WebCommand-tab">
 
@@ -629,7 +594,6 @@
 
                         </div>
 
-                        <!-- Tab-3 -->
                         <div class="tab-pane fade" id="nav-contact" role="tabpanel" aria-labelledby="nav-contact-tab"
                             tabindex="0">
 
@@ -645,7 +609,6 @@
                                 </div>
                                 <div class="tab-content" id="v-pills-tabContent">
 
-                                    <!-- Link 1 -->
                                     <div class="tab-pane fade show active" id="Contacts" role="tabpanel"
                                         aria-labelledby="Contacts-tab">
 
@@ -673,7 +636,6 @@
 
                                     </div>
 
-                                    <!-- Link 2 -->
                                     <div class="tab-pane fade" id="AddContacts" role="tabpanel"
                                         aria-labelledby="AddContacts-tab">
 
@@ -717,7 +679,6 @@
         </div>
     </div>
 
-    <!-- Toast -->
     <div class="toast-container position-fixed top-50 start-50 translate-middle p-3">
         <div id="liveToast" class="toast text-bg-danger" role="alert" aria-live="assertive" aria-atomic="true">
             <div class="toast-header">
@@ -731,34 +692,23 @@
         </div>
     </div>
 
-    <!--Jquery  -->
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
+    <script src="assets/vendore/jquery.min.js"></script>
+    <script src="assets/vendore/jquery-ui.min.js"></script>
+    
+    <script src="assets/vendore/bootstrap.bundle.min.js"></script>
 
-    <!-- Bootstrap -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
-        integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM"
-        crossorigin="anonymous"></script>
-
-    <!-- Particle js -->
-    <script src='https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js'></script>
-    <script src='https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/jquery-ui.min.js'></script>
     <script src="script.js"></script>
 
-    <!-- Siri wave -->
-    <script src="https://unpkg.com/siriwave/dist/siriwave.umd.min.js"></script>
+    <script src="assets/vendore/siriwave.umd.min.js"></script>
 
-    <!-- Texllate js -->
     <script src="assets/vendore/texllate/jquery.fittext.js"></script>
     <script src="assets/vendore/texllate/jquery.lettering.js"></script>
-    <script src="http://jschr.github.io/textillate/jquery.textillate.js"></script>
+    <script src="assets/vendore/jquery.textillate.js"></script>
 
-    <!-- lottie files -->
-    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+    <script src="assets/vendore/lottie-player.js"></script>
 
-    <!-- sweet Alert -->
-    <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+    <script src="assets/vendore/sweetalert.min.js"></script>
 
-    <!-- EEL MUST BE LOADED FIRST -->
     <script type="text/javascript" src="/eel.js"></script>
     
     <script src="main.js"></script>

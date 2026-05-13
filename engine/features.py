@@ -324,7 +324,7 @@ def hybrid_ai_brain(query):
         # =======================================
         else:
             print("[Brain] No Internet! Routing to Local Brain (Ollama Llama 3)...")
-            speak("Network connection lost. Booting local neural network.")
+            
             
             fallback_response = ask_ollama(query, persona)
             filter_text = markdown_to_text(fallback_response)
