@@ -48,9 +48,5 @@ From launching apps to making calls and chatting, Ash brings AI and automation t
 ### 1. Clone the Repository
 
 ```bash
-git clone <your-repository-url>
-cd ash-python-assistant
-=======
-Ash is a personal AI assistant 
-
->>>>>>> 9f8d0a6bf384cf04abf9a9e3c370049eab46a1c0
+git clone https://github.com/Ashfaqsiam/Ash-main.git
+cd Ash-main
